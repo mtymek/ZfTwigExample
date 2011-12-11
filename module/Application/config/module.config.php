@@ -1,15 +1,15 @@
 <?php
 return array(
-    'layout'                => 'layouts/layout.phtml',
+//    'layout'                => 'layouts/layout.phtml',
     'display_exceptions'    => false,
     'di'                    => array(
         'instance' => array(
             'alias' => array(
                 'index' => 'Application\Controller\IndexController',
                 'error' => 'Application\Controller\ErrorController',
-                'view'  => 'Zend\View\PhpRenderer',
+                'view'  => 'ZfTwig\Renderer',
             ),
-            'Zend\View\PhpRenderer' => array(
+            'ZfTwig\Renderer' => array(
                 'parameters' => array(
                     'resolver' => 'Zend\View\TemplatePathStack',
                     'options'  => array(

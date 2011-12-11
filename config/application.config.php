@@ -1,6 +1,7 @@
 <?php
 return array(
     'modules' => array(
+        'ZfTwig',
         'Application',
     ),
     'module_listener_options' => array( 

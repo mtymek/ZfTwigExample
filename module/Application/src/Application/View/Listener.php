@@ -14,16 +14,14 @@ use ArrayAccess,
 
 class Listener implements ListenerAggregate
 {
-    protected $layout;
     protected $listeners = array();
     protected $staticListeners = array();
     protected $view;
     protected $displayExceptions = false;
 
-    public function __construct(Renderer $renderer, $layout = 'layout.phtml')
+    public function __construct(Renderer $renderer)
     {
         $this->view   = $renderer;
-        $this->layout = $layout;
     }
 
     public function setDisplayExceptionsFlag($flag)
@@ -41,7 +39,6 @@ class Listener implements ListenerAggregate
     {
         $this->listeners[] = $events->attach('dispatch.error', array($this, 'renderError'));
         $this->listeners[] = $events->attach('dispatch', array($this, 'render404'), -1000);
-        $this->listeners[] = $events->attach('dispatch', array($this, 'renderLayout'), -80);
     }
 
     public function detach(EventCollection $events)
@@ -97,26 +94,29 @@ class Listener implements ListenerAggregate
             $response->setStatusCode(404);
         }
 
-        $script     = 'error/' . $page . '.phtml';
+        $script     = 'error/' . $page . '.twig';
 
-        // Action content
-        $content    = $this->view->render($script);
-        $e->setResult($content);
-
-        return $this->renderLayout($e);
+        return $this->view->render($script);
     }
 
     public function renderView(MvcEvent $e)
     {
         $response = $e->getResponse();
+        if (!$response) {
+            $response = new Response();
+            $e->setResponse($response);
+        }
+        if ($response->isRedirect()) {
+            return $response;
+        }
         if (!$response->isSuccess()) {
-            return;
+            return $response;
         }
 
         $routeMatch = $e->getRouteMatch();
         $controller = $routeMatch->getParam('controller', 'index');
         $action     = $routeMatch->getParam('action', 'index');
-        $script     = $controller . '/' . $action . '.phtml';
+        $script     = $controller . '/' . $action . '.twig';
 
         $vars       = $e->getResult();
         if (is_scalar($vars)) {
@@ -128,31 +128,9 @@ class Listener implements ListenerAggregate
         $content    = $this->view->render($script, $vars);
 
         $e->setResult($content);
-        return $content;
-    }
 
-    public function renderLayout(MvcEvent $e)
-    {
-        $response = $e->getResponse();
-        if (!$response) {
-            $response = new Response();
-            $e->setResponse($response);
-        }
-        if ($response->isRedirect()) {
-            return $response;
-        }
+        $response->setContent($content);
 
-        $footer   = $e->getParam('footer', false);
-        $vars     = array('footer' => $footer);
-
-        if (false !== ($contentParam = $e->getParam('content', false))) {
-            $vars['content'] = $contentParam;
-        } else {
-            $vars['content'] = $e->getResult();
-        }
-
-        $layout   = $this->view->render($this->layout, $vars);
-        $response->setContent($layout);
         return $response;
     }
 
@@ -175,11 +153,7 @@ class Listener implements ListenerAggregate
             'display_exceptions' => $this->displayExceptions(),
         );
 
-        $content = $this->view->render('error/404.phtml', $vars);
-
-        $e->setResult($content);
-
-        return $this->renderLayout($e);
+        return $this->view->render('error/404.twig', $vars);
     }
 
     public function renderError(MvcEvent $e)
@@ -215,10 +189,6 @@ class Listener implements ListenerAggregate
                 break;
         }
 
-        $content = $this->view->render('error/index.phtml', $vars);
-
-        $e->setResult($content);
-
-        return $this->renderLayout($e);
+        return $this->view->render('error/index.twig', $vars);
     }
 }

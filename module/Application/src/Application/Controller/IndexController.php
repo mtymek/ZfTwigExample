@@ -8,6 +8,6 @@ class IndexController extends ActionController
 {
     public function indexAction()
     {
-        return array();
+        return array('test' => 'Hello, world!');
     }
 }

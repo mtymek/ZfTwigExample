@@ -54,7 +54,7 @@ class Module implements AutoloaderProvider
             return $this->viewListener;
         }
 
-        $viewListener       = new View\Listener($view, $config->layout);
+        $viewListener       = new View\Listener($view);
         $viewListener->setDisplayExceptionsFlag($config->display_exceptions);
 
         $this->viewListener = $viewListener;
