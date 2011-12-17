@@ -14,14 +14,16 @@ use ArrayAccess,
 
 class Listener implements ListenerAggregate
 {
+    protected $layout;
     protected $listeners = array();
     protected $staticListeners = array();
     protected $view;
     protected $displayExceptions = false;
 
-    public function __construct(Renderer $renderer)
+    public function __construct(Renderer $renderer, $layout = 'layout.twig')
     {
         $this->view   = $renderer;
+        $this->layout = $layout;
     }
 
     public function setDisplayExceptionsFlag($flag)
@@ -39,6 +41,7 @@ class Listener implements ListenerAggregate
     {
         $this->listeners[] = $events->attach('dispatch.error', array($this, 'renderError'));
         $this->listeners[] = $events->attach('dispatch', array($this, 'render404'), -1000);
+        $this->listeners[] = $events->attach('dispatch', array($this, 'renderView'), -50);
     }
 
     public function detach(EventCollection $events)
@@ -50,17 +53,6 @@ class Listener implements ListenerAggregate
         }
     }
 
-    public function registerStaticListeners(StaticEventCollection $events, $locator)
-    {
-        $ident   = 'Application\Controller\PageController';
-        $handler = $events->attach($ident, 'dispatch', array($this, 'renderPageController'), -50);
-        $this->staticListeners[] = array($ident, $handler);
-
-        $ident   = 'Zend\Mvc\Controller\ActionController';
-        $handler = $events->attach($ident, 'dispatch', array($this, 'renderView'), -50);
-        $this->staticListeners[] = array($ident, $handler);
-    }
-
     public function detachStaticListeners(StaticEventCollection $events)
     {
         foreach ($this->staticListeners as $i => $info) {
@@ -70,47 +62,11 @@ class Listener implements ListenerAggregate
         }
     }
 
-    public function renderPageController(MvcEvent $e)
-    {
-        $page = $e->getResult();
-        if ($page instanceof Response) {
-            return;
-        }
-
-        $response = $e->getResponse();
-        if ($response->isNotFound()) {
-            return;
-        } 
-
-        $routeMatch = $e->getRouteMatch();
-
-        if (!$routeMatch) {
-            $page = '404';
-        } else {
-            $page = $routeMatch->getParam('action', '404');
-        }
-
-        if ($page == '404') {
-            $response->setStatusCode(404);
-        }
-
-        $script     = 'error/' . $page . '.twig';
-
-        return $this->view->render($script);
-    }
-
     public function renderView(MvcEvent $e)
     {
         $response = $e->getResponse();
-        if (!$response) {
-            $response = new Response();
-            $e->setResponse($response);
-        }
-        if ($response->isRedirect()) {
-            return $response;
-        }
         if (!$response->isSuccess()) {
-            return $response;
+            return;
         }
 
         $routeMatch = $e->getRouteMatch();
@@ -125,9 +81,7 @@ class Listener implements ListenerAggregate
             $vars = (array) $vars;
         }
 
-        $content    = $this->view->render($script, $vars);
-
-        $e->setResult($content);
+        $content = $this->view->render($script, $vars);
 
         $response->setContent($content);
 
@@ -153,7 +107,11 @@ class Listener implements ListenerAggregate
             'display_exceptions' => $this->displayExceptions(),
         );
 
-        return $this->view->render('error/404.twig', $vars);
+        $content = $this->view->render('error/404.twig', $vars);
+
+        $response->setContent($content);
+
+        return $response;
     }
 
     public function renderError(MvcEvent $e)
@@ -169,17 +127,12 @@ class Listener implements ListenerAggregate
         switch ($error) {
             case Application::ERROR_CONTROLLER_NOT_FOUND:
             case Application::ERROR_CONTROLLER_INVALID:
-                $vars = array(
-                    'message'            => 'Page not found.',
-                    'exception'          => $e->getParam('exception'),
-                    'display_exceptions' => $this->displayExceptions(),
-                );
                 $response->setStatusCode(404);
+                return $this->render404($e);
                 break;
 
             case Application::ERROR_EXCEPTION:
             default:
-                $exception = $e->getParam('exception');
                 $vars = array(
                     'message'            => 'An error occurred during execution; please try again later.',
                     'exception'          => $e->getParam('exception'),
@@ -189,6 +142,10 @@ class Listener implements ListenerAggregate
                 break;
         }
 
-        return $this->view->render('error/index.twig', $vars);
+        $content = $this->view->render('error/index.twig', $vars);
+
+        $response->setContent($content);
+
+        return $response;
     }
 }

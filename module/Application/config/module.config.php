@@ -1,7 +1,7 @@
 <?php
 return array(
-//    'layout'                => 'layouts/layout.phtml',
-    'display_exceptions'    => false,
+//    'layout'                => 'layouts/layout.twig',
+    'display_exceptions'    => true,
     'di'                    => array(
         'instance' => array(
             'alias' => array(

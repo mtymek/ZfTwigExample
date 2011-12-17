@@ -45,7 +45,6 @@ class Module implements AutoloaderProvider
         $viewListener = $this->getViewListener($view, $config);
         $app->events()->attachAggregate($viewListener);
         $events       = StaticEventManager::getInstance();
-        $viewListener->registerStaticListeners($events, $locator);
     }
 
     protected function getViewListener($view, $config)
@@ -54,7 +53,7 @@ class Module implements AutoloaderProvider
             return $this->viewListener;
         }
 
-        $viewListener       = new View\Listener($view);
+        $viewListener       = new View\Listener($view, $config['layout']);
         $viewListener->setDisplayExceptionsFlag($config->display_exceptions);
 
         $this->viewListener = $viewListener;
