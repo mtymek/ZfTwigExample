@@ -8,8 +8,6 @@ use Zend\Module\Manager,
 
 class Module implements AutoloaderProvider
 {
-    protected $app;
-
     public function getAutoloaderConfig()
     {
         return array(
@@ -33,11 +31,6 @@ class Module implements AutoloaderProvider
     {
         $events = StaticEventManager::getInstance();
         $events->attach('bootstrap', 'bootstrap', array($this, 'initializeView'));
-    }
-
-    public function setupApplication($e)
-    {
-        $this->app = $e->getParam('application');
     }
 
     public function initializeView($e)
